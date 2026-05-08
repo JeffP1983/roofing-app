@@ -13,7 +13,18 @@ const uploadsRoutes   = require('./routes/uploads');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
+const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g. curl, mobile apps)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/api/auth',       authRoutes);
