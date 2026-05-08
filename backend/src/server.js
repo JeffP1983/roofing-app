@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+const { runMigrations }  = require('./migrations/run');
 const authRoutes      = require('./routes/auth');
 const adminAuthRoutes = require('./routes/adminAuth');
 const materialsRoutes = require('./routes/materials');
@@ -31,6 +32,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+runMigrations()
+  .then(() => {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch((err) => {
+    console.error('Startup migration failed:', err.message);
+    process.exit(1);
+  });
 
 module.exports = app;
