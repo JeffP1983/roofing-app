@@ -1,0 +1,249 @@
+Roofing Estimate Application — Claude Code Build Prompt
+Overview
+Build a full-stack web application for a roofing contractor that does two things: (1) reads uploaded house plans using AI vision to automatically perform a roofing takeoff, and (2) generates a detailed, itemized roofing estimate based on that takeoff and user-selected materials. The app has two user roles — homeowners/clients and internal team members — with separate access controls.
+
+Tech Stack
+Use React (frontend), Node.js/Express (backend), PostgreSQL (database), and the Anthropic Claude API (vision + AI processing). The app should be mobile-responsive. Use JWT for authentication. Host all pricing data in the database, not hardcoded.
+
+Section 1 — User Roles & Authentication
+Two login types:
+Client Login
+
+Can create an account with name, email, password, and project address
+Can upload house plans (PDF or image)
+Can review and confirm the AI-extracted takeoff data before estimate generation
+Can select material preferences from dropdown menus
+Can view and download their completed estimate as a PDF
+Cannot see pricing markup, overhead, or profit line items — they see only the final total
+
+Team/Admin Login
+
+Separate login portal (e.g., /admin)
+Can view all client projects and estimates
+Can edit any estimate line item manually
+Can change default material selections per estimate
+Can update unit pricing for any material in the database
+Can adjust overhead percentage (default 15%) and profit percentage (default 35%) globally or per estimate
+Can override the AI takeoff with manual measurements if needed
+Can mark estimates as Draft, Sent, or Accepted
+Full visibility into cost breakdown including markup
+
+
+Section 2 — Plan Upload & AI Vision Processing
+When a client uploads a plan, the app must:
+Step 1 — Detect plan type
+Send the image/PDF to the Claude API (claude-sonnet-4-20250514) with a vision prompt instructing it to:
+
+Locate the scale key (e.g., "1/4" = 1'" or "1:48") and extract the scale ratio
+Determine whether this is a roof plan (roof geometry shown from above with dimensions) or a floor plan (building footprint only, no roof geometry)
+Label the result as either roof_plan or floor_plan
+
+Step 2a — If roof_plan:
+
+Extract all visible roof plane dimensions using the scale to convert drawing measurements to real-world feet
+Identify and record for each plane: horizontal length, horizontal width, pitch (if labeled), plane type (field, hip, valley, ridge, rake, eave)
+Extract total linear footage of: eaves, rakes, hips, ridges, and valleys separately
+Present extracted data to the user in a structured confirmation screen before calculating
+
+Step 2b — If floor_plan:
+
+Extract the building footprint dimensions using the scale key
+Ask the user to select roof style: Gable, Hip, or Combination
+Ask the user to confirm or enter the roof pitch (display a visual pitch guide for reference — show a small diagram of common pitches: 4/12, 6/12, 8/12, 10/12, 12/12)
+Derive estimated roof planes from the footprint geometry and selected roof style
+Label this estimate as "Assisted Estimate — Field Verification Recommended" on all output
+Present derived data to the user for confirmation before calculating
+
+Step 3 — User Confirmation Screen
+Before any calculation runs, show the user a structured review screen containing:
+
+Each identified roof plane with its dimensions and pitch
+Total squares (horizontal area, pre-slope-factor)
+List of linear footage values (eaves, rakes, hips, ridges, valleys)
+Ability to manually correct any value
+A "Confirm & Generate Estimate" button
+
+
+Section 3 — Calculation Engine
+All calculations run server-side after user confirms the takeoff data.
+Slope factors (horizontal area to actual surface area):
+2/12=1.014, 3/12=1.031, 4/12=1.054, 5/12=1.083, 6/12=1.118, 7/12=1.158, 8/12=1.202, 9/12=1.250, 10/12=1.302, 11/12=1.357, 12/12=1.414
+Process each plane individually:
+Roof Surface Area
+
+Multiply each plane's horizontal area by its slope factor to get true surface area
+Sum all planes for total roofing squares (1 square = 100 sq ft)
+
+Field Shingles
+
+Total squares × 1.15 (15% waste factor)
+Round up to nearest whole square
+
+Underlayment (ABC Pro Guard 10SQ, $99.90/RL)
+
+For planes with pitch ≥ 3/12: calculate squares per plane normally
+For planes with pitch < 3/12: double the underlayment quantity for that plane only
+Total underlayment squares ÷ 10 = number of rolls (round up)
+
+Ice & Water Shield — GAF StormGuard ($136.50/RL, 66 LF/roll)
+
+Applied in valleys only
+Effective coverage per roll = 65 LF (accounting for 1 ft seam overlap)
+Total valley LF ÷ 65 = number of rolls (round up)
+
+Starter — GAF Pro-Start 120 LF/BD ($64.50/BD)
+
+Quantity = (total eave LF + total rake LF) ÷ 120
+Round up to nearest whole bundle
+
+Drip Edge — 1.5x1.5 Painted ($7.675/PC, 10 LF each)
+
+Quantity = (total eave LF + total rake LF) ÷ 10
+Round up, then add 3 extra sticks
+Total = rounded quantity + 3
+
+Hip & Ridge Shingles
+
+Use the selected 25-year shingle's corresponding H&R bundle from the same manufacturer
+Total hip LF + total ridge LF = total H&R linear footage
+÷ 33 LF per bundle = number of bundles (round up)
+
+Labor
+
+Base rate: $50.00/SQ for pitches ≤ 7/12
+For pitches above 7/12, add $5.00/SQ for each full pitch increment above 7/12
+
+8/12 = $55/SQ, 9/12 = $60/SQ, 10/12 = $65/SQ, 11/12 = $70/SQ, 12/12 = $75/SQ
+
+
+Calculate labor per pitch tier separately, then sum
+If plans are uploaded (new construction), do NOT include tear-off line item
+If estimate is created manually or marked as re-roof, include tear-off as optional add
+
+Tear-Off (only for re-roof jobs, not new construction)
+
+Single layer: $75.00/SQ base price
+Each additional layer: +$10.00/SQ
+
+Sales Tax
+
+Apply 8.25% to materials cost only
+Do NOT apply sales tax to labor
+
+Overhead & Profit
+
+Both applied to direct costs (materials + labor) combined
+Overhead default: 15% of direct costs
+Profit default: 35% of direct costs
+Formula: Grand Total = (MaterialsCost + LaborCost) × (1 + 0.15 + 0.35)
+Both percentages are editable by admin users only
+Do NOT apply overhead to the post-profit subtotal
+
+
+Section 4 — Material Selection & Alternate Dropdowns
+Each major line item on the estimate has a default selection AND a dropdown allowing the user to select an alternate. When an alternate is selected, the estimate reprices automatically.
+Shingles (field) — Default: GAF Timberline HDZ ($124.02/SQ)
+Dropdown organized by manufacturer, showing all options from the price database. Each option shows product name and price per square. Organized groups: GAF, Tamko, Atlas, Malarkey, IKO, Owens Corning, CertainTeed.
+Underlayment — Default: ABC Pro Guard 10SQ ($99.90/RL)
+Alternates: All synthetic underlayment options from the database.
+IWS — Default: GAF StormGuard ($136.50/RL)
+Alternates: Other ice & water options from the database.
+Starter — Default: GAF Pro-Start ($64.50/BD)
+Alternates: All manufacturer starters from the database, matched to compatible shingle if possible.
+H&R Shingles — Default: Same manufacturer as selected field shingle, 25-year equivalent
+Alternates: All H&R options from the database.
+Drip Edge — Default: 1.5x1.5 Painted ($7.675/PC)
+Alternates: Other drip edge profiles and finishes from the database.
+When shingle manufacturer is changed, auto-suggest the matching H&R bundle and starter from the same manufacturer, but allow override.
+
+Section 5 — Pricing Database
+Seed the database with the following prices on first run. All prices are editable by admin users only.
+GAF Shingles (per SQ): Royal Sovereign $114.00, Timb Natural Shadow $109.50, Timberline HDZ $124.02, UHDZ Pro UltraMat $135.00, Armorshield II $145.02
+GAF H&R (per BD): Z-Ridge 33LF $87.75, Seal-A-Ridge 25LF $75.00, Timbertex 20LF $82.00, TimbCrst 10" 20LF $120.55, Weatherblocker 100LF $110.00
+GAF Starter: Pro-Start 120LF $64.50/BD
+GAF IWS: StormGuard 2SQ/RL $136.50 (66LF/roll)
+Tamko (per SQ): AR Elite $108.00, Heritage $110.25, Titan XT $115.95, StormFight FLEX $145.02, StormFighter IR $145.02, Hailguard $245.00
+Tamko H&R: Proline 33.3LF $76.60/BD, AR H&R 33.3LF $76.60/BD
+Tamko Starter: 10" Starter 100LF $66.50/BD
+Atlas (per SQ): Prolam $107.25, Pinnacle Pristine $114.57, Pinnacle Impact SG $126.96, StormM Shake $150.00
+Atlas H&R: Pro-Cut Scotch 31LF $82.50/BD, HI Profile 20LF $105.50/BD, ProLam ARS 31LF $82.50/BD, StormM 33LF $82.50/BD
+Atlas Starter: Pro-Cut 140LF $75.25/BD
+Malarkey (per SQ): Highlander $121.65, Vista AR $132.12, Legacy $154.99, Windsor 285 SG $275.00
+Malarkey H&R: EZ Ridge XT $125.00/BD, Ridgeflex 227 31LF $92.00/BD
+Malarkey Starter: Smart Start 114.9LF $80.80/BD, Windsor Start 70LF $160.00/BD
+IKO (per SQ): Marathon 25YR $116.46, Cambridge $109.50, Dynasty AR $116.52, Nordic $132.03, Royal Estate $219.72, Armourshake $272.60
+IKO H&R: AR H&R 33LF $77.50/BD, Ultra HP 20LF $110.00/BD
+IKO Starter: Leading Edge 118LF $67.50/BD
+Owens Corning (per SQ): Supreme $104.01, Oakridge $113.04, TruDef Oakridge $117.63, TruDef Duration $122.10, TruDef Dur Storm $136.02, TruDef Dura Flex AR $141.63
+OC H&R: Proedge AR 33LF $84.75/BD, Rizeridge AR 33LF $94.53/BD, Duraridge 20LF $103.45/BD, ImpactRidge AR $113.50/BD
+OC Starter: Starter Strip 105LF $64.00/BD
+CertainTeed (per SQ): CT AR XT25 $104.49, Landmark $121.59, Patriot $112.83, Landmark Pro AR $140.73, Belmont IR AR $226.96, ClimateFlex IR $145.02, President IR AR $264.55, AR President TL $282.66, Grand Manor $291.35
+CT H&R: Cedar Crest IR $95.25/BD, Cedar Crest 20L $95.25/BD, Shangle Ridge 10LF $97.75/BD, Shad Clmtfx AR H&R $108.00/BD
+CT Starter: SwiftStart 116LF $68.00/BD, Pres Starter 36LF $116.65/BD, 10" HP Starter 102LF $131.40/BD
+Underlayment: 15# Felt 4SQ $33.13/RL, Tarco MS300 2SQ $93.16/RL, ABC Pro Guard 10SQ $99.90/RL, Rhinoroof Gran 2SQ $106.93/RL, Maxfelt XT 10SQ $99.90/RL, Maxfelt NC 10SQ $99.90/RL, Maxfelt 30 10SQ $117.60/RL, Atlas Summit 60 10SQ $114.02/RL, Atlas Summit 180 10SQ $151.74/RL, Atlas Weathermaster 200 $130.15/RL, CERT Roofrunner 10SQ $130.43/RL, GAF Feltbuster 10SQ $136.74/RL, GAF Tigerpaw 10SQ $281.52/RL, IKO Stormshield I&W $137.11/RL, Mal Secure Start Lite 10SQ $112.39/RL, OC Proarmor 10SQ $137.40/RL, OC Deck Defense 10SQ $263.90/RL, OC Weatherlock 2SQ $151.63/RL, Polyglass Polystick MTS 2SQ $144.50/RL
+Fasteners: Plastic Cap 1" 2M $19.75/BX, Coil Nail 1-1/4" EG $54.00/BX, Nail 1-1/4" EG 50# $85.74/BX, 8D Sinker 50# $135.63/BX
+Flashing & Accessories: Drip Edge 1.5x1.5 Painted $7.675/PC, Drip Edge 2x2 Painted $9.95/PC, Step Shingle 4x4 8" $70.48/BD, Galv Roll Valley 20"x50' $80.00/RL, 1.5" Bullet Boot $33.10/PC, 2" Bullet Boot $39.25/PC, 3" Bullet Boot $45.15/PC, 8" Roof Jack $53.05/PC, 1.5" Lead Flash $21.40/PC, 2" Lead Flash $22.55/PC, 3" Lead Flash $31.05/PC
+Ventilation: Low Profile 550 $21.43/PC, Slant Back 750 $21.55/PC, Lomanco 135 Static $76.40/PC, Lomanco 2000 Power $187.10/EA, Turbine 12" $89.00/PC, Lomanco 14" Turbine $101.75/PC, GAF Cobra Rigid 3 12" $18.83/PC, OC Ventsure 12"x4' $21.35/PC, Ross 65 $11.10/PC, Ross 150 $42.85/PC
+
+Section 6 — Estimate Output Format
+The estimate is displayed as a structured document with the following sections:
+Header: Company name/logo placeholder, project address, date, estimate number, estimate type label (Calculated or Assisted)
+Takeoff Summary: Table showing each roof plane — dimensions, pitch, horizontal area, slope factor, actual surface area in squares
+Materials Section — Line-item table with columns: Description | Qty | Unit | Unit Price | Total
+Each line item has a collapse/expand chevron (▾) that opens a dropdown of alternate material options. Selecting an alternate immediately reprices that line and recalculates the estimate total.
+Line items to include:
+
+Field Shingles (selected product, qty in squares with waste)
+Underlayment (selected product, qty in rolls)
+Ice & Water Shield (GAF StormGuard or alternate, qty in rolls)
+Starter Course (selected product, qty in bundles)
+Drip Edge (selected profile, qty in sticks)
+Hip & Ridge Shingles (selected product, qty in bundles)
+
+Labor Section — Line-item breakdown by pitch tier showing squares and rate per tier, tear-off if applicable
+Financial Summary (client view):
+
+Materials Subtotal
+Sales Tax (8.25% on materials)
+Labor Total
+Grand Total
+
+Financial Summary (admin view adds):
+
+Direct Costs (materials + labor)
+Overhead (15% of direct costs)
+Profit (35% of direct costs)
+Materials Tax (8.25% on materials only)
+Grand Total
+
+Export: "Download PDF" button that generates a clean, printable PDF of the client-facing estimate. Admin export includes full cost breakdown.
+
+Section 7 — Admin Controls Panel
+Accessible only to team login at /admin. Include:
+
+Pricing Manager — Table of all materials in the database. Each row is editable inline. Save button commits changes. Changes take effect on all new estimates going forward.
+O&P Settings — Input fields for overhead % and profit %. Current defaults: 15% overhead, 35% profit. Changes apply globally.
+Estimate Manager — List of all estimates with status tags (Draft / Sent / Accepted). Click any estimate to open it in edit mode.
+Manual Override Mode — On any estimate, admin can toggle to manual mode and edit any quantity or price directly before finalizing.
+
+
+Section 8 — Important Business Rules Summary
+
+Plans uploaded by clients = new construction → no tear-off line item
+Tax applies to materials only, never labor
+Overhead and profit both apply to (materials + labor) combined, calculated as flat additions: Grand Total = DirectCosts × 1.50
+For pitches under 3/12, double the underlayment for that plane only — not the whole roof
+For pitches above 7/12, add $5/SQ labor per pitch increment — calculated per plane, not blended
+Drip edge: perimeter ÷ 10, round up, + 3 extra sticks always
+Starter: full perimeter (eaves + rakes) ÷ 120, round up
+IWS: valley LF ÷ 65 (65 effective LF per roll after 1 ft overlap), round up
+H&R: (hip LF + ridge LF) ÷ 33, round up
+Field shingles: total actual squares × 1.15, round up
+Floor-plan-derived estimates must be labeled "Assisted Estimate — Field Verification Recommended"
+Clients never see markup — they see only the Grand Total and line-item material/labor costs at face value
+
+
+That's your full prompt. Copy and paste that directly into Claude Code. A couple of tips for when you kick it off:
+First, tell Claude Code to build it in stages — auth and database first, then the calculation engine, then the AI vision integration, then the UI. Trying to build it all at once tends to get messy.
+Second, the Anthropic API key for the vision calls will need to be set as an environment variable. Claude Code will prompt you for it or you can set it in your .env file as ANTHROPIC_API_KEY.
+Third, when it gets to the plan-reading piece, if the results feel inconsistent, the vision prompt that gets sent to Claude can be tuned — I can help you dial that in once the app is running.

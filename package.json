@@ -1,0 +1,11 @@
+{
+  "name": "roofing-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "migrate": "cd backend && npm run migrate",
+    "seed:admin": "cd backend && node src/migrations/seed_admin.js"
+  }
+}

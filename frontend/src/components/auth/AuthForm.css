@@ -1,0 +1,116 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%);
+  padding: 1rem;
+}
+
+.auth-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.auth-logo h1 {
+  font-size: 1.5rem;
+  color: #1a3a5c;
+  margin: 0 0 0.25rem;
+}
+.auth-logo p {
+  color: #666;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.auth-form h2 {
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 0.35rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-group input:focus {
+  border-color: #2d6a9f;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2d6a9f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background 0.2s;
+}
+.btn-primary:hover:not(:disabled) { background: #1a3a5c; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.auth-error {
+  background: #fff0f0;
+  border: 1px solid #f5a5a5;
+  color: #c0392b;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+.auth-footer a {
+  color: #2d6a9f;
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-footer a:hover { text-decoration: underline; }
+
+.admin-badge {
+  display: inline-block;
+  background: #e8f0fe;
+  color: #1a3a5c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
