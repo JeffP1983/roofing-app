@@ -128,7 +128,9 @@ export default function NewEstimate() {
         setStep('floor_config');
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Analysis failed');
+      const msg = err.response?.data?.error || err.message || 'Analysis failed';
+      const detail = err.response?.data?.detail;
+      setError(detail ? `${msg} — ${detail}` : msg);
       setStep('upload');
     }
   }

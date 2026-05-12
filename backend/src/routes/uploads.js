@@ -37,11 +37,19 @@ router.post('/analyze', authenticate, upload.single('plan'), async (req, res) =>
     const result = await analyzePlan(req.file.buffer, req.file.mimetype);
     res.json(result);
   } catch (err) {
-    console.error('Vision analysis error:', err);
+    console.error('[uploads] Vision analysis error — status:', err.status, 'message:', err.message);
+    if (err.error) console.error('[uploads] Anthropic error body:', JSON.stringify(err.error));
+
     if (err.message?.includes('ANTHROPIC_API_KEY')) {
       return res.status(503).json({ error: err.message });
     }
-    if (err.status === 400 || err.message?.includes('JSON')) {
+    if (err.status === 401) {
+      return res.status(503).json({ error: 'Anthropic API key is invalid or revoked. Update ANTHROPIC_API_KEY in Railway environment variables.', detail: err.message });
+    }
+    if (err.status === 400) {
+      return res.status(422).json({ error: 'The Anthropic API rejected the request (400).', detail: err.message });
+    }
+    if (err.message?.includes('JSON') || err.message?.includes('json')) {
       return res.status(422).json({ error: 'Could not extract plan data from the uploaded file. Try a clearer image.', detail: err.message });
     }
     res.status(500).json({ error: 'Vision analysis failed', detail: err.message });

@@ -95,10 +95,17 @@ function buildContentBlock(fileBuffer, mimeType) {
 }
 
 function extractJSON(text) {
-  // Strip any accidental markdown fences or leading prose
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Claude did not return a JSON object in its response');
-  return JSON.parse(match[0]);
+  if (!match) {
+    console.error('[vision] Claude response contained no JSON object. Raw output:', text.slice(0, 500));
+    throw new Error(`Claude did not return a JSON object. Response: "${text.slice(0, 200)}"`);
+  }
+  try {
+    return JSON.parse(match[0]);
+  } catch (e) {
+    console.error('[vision] JSON parse failed. Matched text:', match[0].slice(0, 500));
+    throw new Error(`JSON parse failed: ${e.message}`);
+  }
 }
 
 async function analyzePlan(fileBuffer, mimeType) {
