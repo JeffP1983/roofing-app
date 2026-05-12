@@ -110,9 +110,8 @@ function extractJSON(text) {
 
 async function analyzePlan(fileBuffer, mimeType) {
   const client = getClient();
-  const isPdf = mimeType === 'application/pdf';
 
-  const createParams = {
+  const response = await client.messages.create({
     model: VISION_MODEL,
     max_tokens: 4096,
     messages: [{
@@ -122,14 +121,7 @@ async function analyzePlan(fileBuffer, mimeType) {
         { type: 'text', text: ANALYSIS_PROMPT },
       ],
     }],
-  };
-
-  // PDF document type requires the pdfs beta on some API versions
-  if (isPdf) createParams.betas = ['pdfs-2024-09-25'];
-
-  const response = await (isPdf
-    ? client.beta.messages.create(createParams)
-    : client.messages.create(createParams));
+  });
 
   const raw = response.content[0]?.text ?? '';
   const parsed = extractJSON(raw);
