@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../config/database');
 
-const MIGRATION_FILES = ['001_schema.sql', '002_seed_pricing.sql', '003_takeoff_metadata.sql', '004_rename_shingles_category.sql'];
+const MIGRATION_FILES = ['001_schema.sql', '002_seed_pricing.sql', '003_takeoff_metadata.sql', '004_rename_shingles_category.sql', '005_hip_ridge_default.sql'];
 
 async function runMigrations() {
   // Ensure tracking table exists
