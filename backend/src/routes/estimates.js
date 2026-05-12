@@ -99,6 +99,8 @@ router.post('/projects/:projectId/estimates', authenticate, async (req, res) => 
     planes = [],
     linear_footage = {},
     notes,
+    facet_count,
+    structure_complexity,
   } = req.body;
 
   if (!planes.length) {
@@ -151,9 +153,9 @@ router.post('/projects/:projectId/estimates', authenticate, async (req, res) => 
 
     // Create takeoff
     const takeoffResult = await dbClient.query(
-      `INSERT INTO takeoffs (estimate_id, plan_type, roof_style, scale_ratio, confirmed_at)
-       VALUES ($1, $2, $3, $4, NOW()) RETURNING id`,
-      [estimate.id, plan_type, roof_style || null, scale_ratio || null]
+      `INSERT INTO takeoffs (estimate_id, plan_type, roof_style, scale_ratio, facet_count, structure_complexity, confirmed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
+      [estimate.id, plan_type, roof_style || null, scale_ratio || null, facet_count || null, structure_complexity || null]
     );
     const takeoffId = takeoffResult.rows[0].id;
 

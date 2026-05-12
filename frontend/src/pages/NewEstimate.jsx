@@ -92,6 +92,8 @@ export default function NewEstimate() {
   const [planes, setPlanes]               = useState([]);
   const [linearFootage, setLinearFootage] = useState({ eave_lf:0, rake_lf:0, hip_lf:0, ridge_lf:0, valley_lf:0 });
   const [isAssisted, setIsAssisted]       = useState(false);
+  const [facetCount, setFacetCount]       = useState(0);
+  const [complexity, setComplexity]       = useState('normal');
 
   // Floor plan config
   const [roofStyle, setRoofStyle]         = useState('gable');
@@ -165,12 +167,14 @@ export default function NewEstimate() {
 
       // 1. Create estimate + takeoff
       const { data: created } = await axios.post(`/api/projects/${projectId}/estimates`, {
-        plan_type:      planType,
-        roof_style:     planType === 'floor_plan' ? roofStyle : undefined,
-        scale_ratio:    analysisResult?.scale_ratio,
+        plan_type:            planType,
+        roof_style:           planType === 'floor_plan' ? roofStyle : undefined,
+        scale_ratio:          analysisResult?.scale_ratio,
         planes,
-        linear_footage: linearFootage,
-        is_reroof:      false,
+        linear_footage:       linearFootage,
+        facet_count:          facetCount,
+        structure_complexity: complexity,
+        is_reroof:            false,
       });
 
       // 2. Run calculation with default materials
@@ -297,6 +301,8 @@ export default function NewEstimate() {
             linearFootage={linearFootage}
             onPlanesChange={setPlanes}
             onLFChange={setLinearFootage}
+            onFacetCountChange={setFacetCount}
+            onComplexityChange={setComplexity}
             isAssisted={isAssisted}
           />
 
