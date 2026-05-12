@@ -1,8 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { getSlopeFactor } = require('./calculationEngine');
 
-// The spec asks for claude-sonnet-4-20250514; that model shipped as claude-sonnet-4-6 in the API.
-const VISION_MODEL = process.env.VISION_MODEL || 'claude-sonnet-4-6';
+const VISION_MODEL = process.env.VISION_MODEL || 'claude-3-5-sonnet-20241022';
 
 function getClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
