@@ -13,22 +13,26 @@ export default function ClientDashboard() {
   const [showNewProject, setShowNew]    = useState(false);
   const [newAddress, setNewAddress]     = useState('');
   const [creating, setCreating]         = useState(false);
+  const [error, setError]               = useState('');
 
   useEffect(() => {
-    axios.get('/api/projects').then(r => setProjects(r.data)).catch(() => {});
+    axios.get('/api/projects')
+      .then(r => setProjects(r.data))
+      .catch(err => setError(err.response?.data?.error || err.message || 'Failed to load projects'));
   }, []);
 
   async function createProject() {
     if (!newAddress.trim()) return;
     setCreating(true);
+    setError('');
     try {
       const { data } = await axios.post('/api/projects', { project_address: newAddress });
       setProjects(prev => [data, ...prev]);
       setShowNew(false);
       setNewAddress('');
-      // Go straight to upload flow for the new project
       navigate(`/estimates/new?project=${data.id}`);
-    } catch {
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to create project');
       setCreating(false);
     }
   }
@@ -53,6 +57,14 @@ export default function ClientDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div style={{ background: '#fdecea', border: '1px solid #f5c6cb', borderRadius: 6, padding: '10px 16px', marginBottom: '1rem', color: '#c0392b', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{error}</span>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0392b', fontSize: '1rem', padding: '0 4px' }}>×</button>
+        </div>
+      )}
 
       {/* New project form */}
       {showNewProject && (
