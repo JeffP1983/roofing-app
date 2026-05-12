@@ -1,7 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { getSlopeFactor } = require('./calculationEngine');
 
-const VISION_MODEL = process.env.VISION_MODEL || 'claude-3-5-sonnet-20241022';
+const VISION_MODEL = process.env.VISION_MODEL || 'claude-sonnet-4-6';
 
 function getClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
