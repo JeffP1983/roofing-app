@@ -110,17 +110,32 @@ function extractJSON(text) {
 async function analyzePlan(fileBuffer, mimeType) {
   const client = getClient();
 
-  const response = await client.messages.create({
-    model: VISION_MODEL,
-    max_tokens: 4096,
-    messages: [{
-      role: 'user',
-      content: [
-        buildContentBlock(fileBuffer, mimeType),
-        { type: 'text', text: ANALYSIS_PROMPT },
-      ],
-    }],
-  });
+  const contentBlock = buildContentBlock(fileBuffer, mimeType);
+  console.log('[vision] model:', VISION_MODEL);
+  console.log('[vision] file mimeType:', mimeType, '| fileSize bytes:', fileBuffer.length);
+  console.log('[vision] content block type:', contentBlock.type, '| source type:', contentBlock.source?.type, '| media_type:', contentBlock.source?.media_type);
+
+  let response;
+  try {
+    response = await client.messages.create({
+      model: VISION_MODEL,
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          contentBlock,
+          { type: 'text', text: ANALYSIS_PROMPT },
+        ],
+      }],
+    });
+  } catch (err) {
+    console.error('[vision] Anthropic SDK error:');
+    console.error('  status:', err.status);
+    console.error('  message:', err.message);
+    console.error('  error body:', JSON.stringify(err.error ?? err.body ?? null));
+    console.error('  headers:', JSON.stringify(err.headers ?? null));
+    throw err;
+  }
 
   const raw = response.content[0]?.text ?? '';
   const parsed = extractJSON(raw);
